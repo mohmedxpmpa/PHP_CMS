@@ -1,68 +1,116 @@
+
 <?php
-	
-	require 'includes/init.php';
-	$conn = require ('includes/db.php');
-	
+require 'includes/init.php';
+$conn = require_once "includes/db.php";
 
-	if(isset($_POST['register'])) {
-		$errMsg = '';
+if(isset($_REQUEST['btn_register'])) //button name "btn_register"
+{
+ $username = htmlspecialchars($_REQUEST['txt_username']); //textbox name "txt_email"
+ $password = htmlspecialchars($_REQUEST['txt_password']); //textbox name "txt_password"
+  
+ if(empty($username)){
+  $errorMsg[]="Please enter username"; //check username textbox not empty 
+ }
+ else if(empty($password)){
+  $errorMsg[]="Please enter password"; //check passowrd textbox not empty
+ }
+ else if(strlen($password) < 6){
+  $errorMsg[] = "Password must be atleast 6 characters"; //check passowrd must be 6 characters
+ }
+ else
+ { 
+  try
+  { 
+   $stmt=$conn->prepare("SELECT username FROM user 
+          WHERE username=:username"); // SQL select query
+   
+   $stmt->execute(array(':username'=>$username)); //execute query 
+   $row=$stmt->fetch(PDO::FETCH_ASSOC); 
+   
+   if($row["username"]==$username){
+    $errorMsg[]="Sorry username already exists"; //check condition username already exists 
+   }
 
-		// Get data from FROM
-		$username = $_POST['username'];
-		$password = $_POST['password'];
-
-
-		if($username == '')
-			$errMsg = 'Enter username';
-		if($password == '')
-			$errMsg = 'Enter password';
-
-		if($errMsg == ''){
-			try {
-				$stmt = $conn->prepare('INSERT INTO user(username, password) VALUES (:username, :password)');
-				$stmt->execute(array(
-					':username' => $username,
-					':password' => password_hash($password, PASSWORD_DEFAULT)
-					));
-				header('Location: register.php?action=joined');
-				exit;
-			}
-			catch(PDOException $e) {
-				echo $e->getMessage();
-			}
-		}
-	}
-
-	if(isset($_GET['action']) && $_GET['action'] == 'joined') {
-		$errMsg = 'Registration successfull. Now you can <a href="login.php">login</a>';
-	}
+   else if(!isset($errorMsg)) //check no "$errorMsg" show then continue
+   {
+    $new_password = password_hash($password, PASSWORD_DEFAULT); //encrypt password using password_hash()
+    
+    $insert_stmt=$conn->prepare("INSERT INTO user (username,password) VALUES
+                (:username,:password)");   //SQL insert query     
+    
+    if($insert_stmt->execute(array( ':username' =>$username, 
+                                    ':password'=>$new_password))){
+             
+     $registerMsg="Register Successfully..... Please Click On Login Account Link"; //execute query success message
+    }
+   }
+  }
+  catch(PDOException $e)
+  {
+   echo $e->getMessage();
+  }
+ }
+}
 ?>
 
-<html>
-<head><title>Register</title></head>
-	<style>
-	html, body {
-		margin: 1px;
-		border: 0;
-	}
-	</style>
-<body>
-	<div align="center">
-		<div style=" border: solid 1px #006D9C; " align="center">
-			<?php
-				if(isset($errMsg)){
-					echo '<div style="color:#FF0000;text-align:center;font-size:17px;">'.$errMsg.'</div>';
-				}
-			?>
-			<div style="background-color:#006D9C; color:#FFFFFF; padding:10px;"><b>Register</b></div>
-			<div style="margin: 15px">
-				<form action="" method="post">
-					<input type="text" name="username" placeholder="Username" value="<?php if(isset($_POST['username'])) echo $_POST['username'] ?>" autocomplete="off" class="box"/><br /><br />
-					<input type="password" name="password" placeholder="Password" value="<?php if(isset($_POST['password'])) echo $_POST['password'] ?>" class="box" /><br/><br />
-					<input type="submit" name='register' value="Register" class='submit'/><br />
-				</form>
-			</div>
-		</div>
-	</div>
-</body>
-</html>
+
+<!--                                                                                                         The HTML form                                                        -->
+
+
+<?php require 'includes/header.php'; ?>
+
+<?php
+if(isset($errorMsg))
+{
+ foreach($errorMsg as $error)
+ {
+ ?>
+  <div class="alert alert-danger">
+   <strong>WRONG ! <?php echo $error; ?></strong>
+  </div>
+    <?php
+ }
+}
+if(isset($registerMsg))
+{
+?>
+ <div class="alert alert-success">
+  <strong><?php echo $registerMsg; ?></strong>
+ </div>
+<?php
+}
+?> 
+<form method="post" class="form-horizontal">
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Username</label>
+        <div class="col-sm-6">
+            <input type="text" name="txt_username" class="form-control" placeholder="Enter Username" />
+        </div>
+    </div>
+
+
+    <div class="form-group">
+        <label class="col-sm-3 control-label">Password</label>
+        <div class="col-sm-6">
+            <input type="password" name="txt_password" class="form-control" placeholder="enter passowrd" />
+        </div>
+    </div>
+
+    <div class="form-group">
+        <div class="col-sm-offset-3 col-sm-9 m-t-15">
+            <input type="submit" name="btn_register" class="btn btn-primary " value="Register">
+        </div>
+    </div>
+
+    <div class="form-group">
+        <div class="col-sm-offset-3 col-sm-9 m-t-15">
+            You have a account register here? <a href="index.php">
+                <p class="text-info">Login Account</p>
+            </a>
+        </div>
+    </div>
+
+</form>
+
+<?php require 'includes/footer.php'; ?>
